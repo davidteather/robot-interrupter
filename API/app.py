@@ -54,14 +54,16 @@ def generate_text():
   # Clear any current text
   driver.find_element_by_xpath("//textarea[@name='prompt']").send_keys(Keys.CONTROL + "a")
   driver.find_element_by_xpath("//textarea[@name='prompt']").send_keys(Keys.DELETE)
-  driver.find_element_by_xpath("//textarea[@name='prompt']").send_keys(request.json["text"])
-  # Generate new text
-  driver.find_element_by_xpath("//button[@class='v-btn theme--light info submit']").click()
-  time.sleep(2)
-  driver.find_element_by_xpath("//span[@class='v-btn__loading']").click()
+  if request.json["text"] != "":
+    driver.find_element_by_xpath("//textarea[@name='prompt']").send_keys(request.json["text"])
+    # Generate new text
+    driver.find_element_by_xpath("//button[@class='v-btn theme--light info submit']").click()
+    time.sleep(2)
+    driver.find_element_by_xpath("//span[@class='v-btn__loading']").click()
 
-  # Find response
-  res = driver.find_elements_by_xpath("//div[@id='completion']/div")[1].text.strip()
+    # Find response
+    res = driver.find_elements_by_xpath("//div[@id='completion']/div")[1].text.strip()
 
-  # Return Response
-  return res.lower().replace(request.json["text"].lower(), "")
+    # Return Response
+    return res.lower().replace(request.json["text"].lower(), "")
+  return ""
