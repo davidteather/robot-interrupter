@@ -1,2 +1,4 @@
 env/*
 settings.json
+models/*
+checkpoint/*

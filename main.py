@@ -4,13 +4,36 @@ from selenium.webdriver.common.keys import Keys
 import time
 import json
 import requests
+import pygame
+from gtts import gTTS 
 
+pygame.mixer.init()
 headless = False
 # AWS LOGINS
 with open("settings.json", "r") as jsonO:
     data = json.loads(jsonO.read())
     aws_login = data["aws_email"]
     aws_pass = data["aws_password"]
+
+# Setup ML
+import gpt_2_simple as gpt2
+
+# Download model if not exists
+model_name = "355M"
+if not os.path.isdir(os.path.join("models", model_name)):
+	print(f"Downloading {model_name} model...")
+	gpt2.download_gpt2(model_name=model_name)
+
+# Start model instance
+sess = gpt2.start_tf_sess()
+gpt2.load_gpt2(sess)
+print("Loaded Model")
+
+def generateML(primer):
+    return gpt2.generate(sess, length=75, prefix=primer, return_as_list=True, include_prefix=False)[0].lower().replace(primer.lower(), "")
+
+
+# TODO: CHANGE TO ACTUAL GOOD AWS https://docs.aws.amazon.com/transcribe/latest/dg/API_streaming_StartStreamTranscription.html
 
 # Chrome stuff to avoid detection
 chromeProfile = webdriver.ChromeOptions()
@@ -54,8 +77,12 @@ except:
 
 # Access the content of the recognition
 previousText = ""
+var = False
 while True:
-    recentSection = driver.find_element_by_xpath("//div[@id='streamingContent']/div")[len(driver.find_element_by_xpath("//div[@id='streamingContent']/div"))-1].text.strip()
+    try:
+        recentSection = driver.find_elements_by_xpath("//div[@id='streamingContent']/div")[len(driver.find_elements_by_xpath("//div[@id='streamingContent']/div"))-2].text.strip()
+    except:
+        recentSection = driver.find_elements_by_xpath("//div[@id='streamingContent']/div")[len(driver.find_elements_by_xpath("//div[@id='streamingContent']/div"))-1].text.strip()
     #if previousText == "":
     #    newText = recentSection
     #else:
@@ -64,7 +91,26 @@ while True:
     # previousText = entireScript
     newText = recentSection
     print(newText)
-    prediction = requests.post("http://127.0.0.1:5000/gentext", json={"text": newText}).text
-    print("PREDICTION: " + prediction)
 
-    time.sleep(1)
+    if newText != "":
+        predictionText = generateML(newText).replace("<|endoftext|>", "")
+        print("PREDICTION: " + predictionText)
+        # generate the TTS
+        myobj = gTTS(text=predictionText, lang='en', slow=False) 
+
+        try:
+            myobj.save("tmp.mp3")
+            pygame.mixer.music.load("tmp.mp3")
+            pygame.mixer.music.play()
+            time.sleep(3)
+            var = True
+        except:
+            myobj.save("tmp2.mp3")
+            pygame.mixer.music.load("tmp2.mp3")
+            pygame.mixer.music.play()
+            time.sleep(3)
+            var = True
+
+    if not var:
+        time.sleep(2)
+    
