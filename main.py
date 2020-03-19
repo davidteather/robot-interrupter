@@ -23,18 +23,35 @@ if not os.path.isdir(os.path.join("models", model_name)):
 	print(f"Downloading {model_name} model...")
 	gpt2.download_gpt2(model_name=model_name)
 
+# Downloads some data to fine tune on
+file_name = "shakespeare.txt"
+if not os.path.isfile(file_name):
+	url = "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt"
+	data = requests.get(url)
+	
+	with open(file_name, 'w') as f:
+		f.write(data.text)
+    
+# Trains on 1 step just to get a checkpoint to use
+sess = gpt2.start_tf_sess()
+gpt2.finetune(sess,
+              file_name,
+              model_name=model_name,
+              steps=1)
+
+# Actually train
+gpt2.generate(sess)
+
 # Start model instance
 sess = gpt2.start_tf_sess()
 gpt2.load_gpt2(sess)
 print("Loaded Model")
 
+# Function to generate text
 def generateML(primer):
     return gpt2.generate(sess, length=75, prefix=primer, return_as_list=True, include_prefix=False)[0].lower().replace(primer.lower(), "")
 
-
-# TODO: CHANGE TO ACTUAL GOOD AWS https://docs.aws.amazon.com/transcribe/latest/dg/API_streaming_StartStreamTranscription.html
-
-# Chrome stuff to avoid detection
+# Chrome profile to attempt avoid detection
 chromeProfile = webdriver.ChromeOptions()
 chromeProfile.add_argument("--disable-automation")
 chromeProfile.add_argument("--no-sandbox")
@@ -46,9 +63,6 @@ chromeProfile.add_argument("--start-maximized")
 chromeProfile.add_experimental_option('useAutomationExtension', False)
 chromeProfile.add_experimental_option(
     "excludeSwitches", ["enable-automation"])
-
-if headless == True:
-    chromeProfile.add_argument('headless')
 driver = webdriver.Chrome(chrome_options=chromeProfile)
 
 # Get website
@@ -97,6 +111,7 @@ while True:
         # generate the TTS
         myobj = gTTS(text=predictionText, lang='en', slow=False) 
 
+        # Save voice as either tmp 1 or tmp 2 if other in use 
         try:
             myobj.save("tmp.mp3")
             pygame.mixer.music.load("tmp.mp3")
@@ -112,4 +127,3 @@ while True:
 
     if not var:
         time.sleep(2)
-    
